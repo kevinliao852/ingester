@@ -1,12 +1,9 @@
 package ingester
 
 import (
-	"context"
 	"fmt"
 	v1 "inx/github.com/mukappalambda/my-trader/proto/message/v1"
 	"time"
-
-	"google.golang.org/genproto/googleapis/type/datetime"
 
 	"github.com/google/uuid"
 )
@@ -46,51 +43,30 @@ type IngestData struct {
 	Timestamp int64
 }
 
+// TODO startWithContext
+// TODO add a cxt
+// TODO graceful shutdown
+
 func (i *Ingester) Start() {
-	go func() {
-		for {
-			data := <-i.queue
-			unixNano := time.Now().UnixNano()
 
-			// uuid for id
-			id := uuid.New().String()
+	for {
+		data := <-i.queue
+		// metadata
+		unixNano := time.Now().UnixNano()
+		// uuid for id
+		id := uuid.New().String()
 
-			ingestData := IngestData{
-				Data:      data,
-				Id:        id,
-				Timestamp: unixNano,
-			}
-
-			if i.logger != nil {
-				i.logger.LogMessage(fmt.Sprintf("%v", ingestData))
-			}
-
-			t := time.Unix(0, unixNano)
-
-			ctx := context.Background()
-
-			fmt.Println("putting message", i.grpcClient)
-
-			r, err := i.grpcClient.PutMessage(ctx, &v1.MessageRequest{
-				Topic:   "test-topic",
-				Message: data,
-				CreatedAt: &datetime.DateTime{
-					Year:    int32(t.Year()),
-					Month:   int32(t.Month()),
-					Day:     int32(t.Day()),
-					Hours:   int32(t.Hour()),
-					Minutes: int32(t.Minute()),
-					Seconds: int32(t.Second()),
-				},
-			})
-
-			if err != nil {
-				fmt.Println(err)
-			}
-
-			fmt.Println(r)
+		ingestData := IngestData{
+			Data:      data,
+			Id:        id,
+			Timestamp: unixNano,
 		}
-	}()
+
+		if i.logger != nil {
+			i.logger.LogMessage(fmt.Sprintf("%v", ingestData))
+		}
+
+	}
 }
 
 func (i *Ingester) Stop() {
